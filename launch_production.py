@@ -7,14 +7,24 @@ Assim sobra um unico executavel principal para o projeto.
 
 import os
 import atexit
-import fcntl
 import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.request
 import webbrowser
+
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
+
+try:
+    import msvcrt
+except ImportError:
+    msvcrt = None
 
 
 def _ensure_project_venv_python() -> None:
@@ -24,7 +34,11 @@ def _ensure_project_venv_python() -> None:
         return
 
     project_root = os.path.dirname(os.path.abspath(__file__))
-    venv_python = os.path.join(project_root, ".venv", "bin", "python")
+    if sys.platform == "win32":
+        venv_python = os.path.join(project_root, ".venv", "Scripts", "python.exe")
+    else:
+        venv_python = os.path.join(project_root, ".venv", "bin", "python")
+
     if not os.path.exists(venv_python):
         return
 
@@ -35,7 +49,11 @@ def _ensure_project_venv_python() -> None:
 
     env = os.environ.copy()
     env["AGV_VENV_REEXEC"] = "1"
-    os.execve(expected, [expected] + sys.argv, env)
+    if sys.platform == "win32":
+        ret = subprocess.call([expected] + sys.argv, env=env)
+        sys.exit(ret)
+    else:
+        os.execve(expected, [expected] + sys.argv, env)
 
 
 _ensure_project_venv_python()
@@ -51,17 +69,26 @@ _RUNNING = True
 _SERVER = None
 
 
+def _lock_file_path() -> str:
+    if sys.platform == "win32":
+        return os.path.join(tempfile.gettempdir(), "agv_launch_production.lock")
+    return "/tmp/agv_launch_production.lock"
+
+
 def _acquire_single_instance_lock() -> bool:
     global _LOCK_HANDLE
 
-    lock_path = "/tmp/agv_launch_production.lock"
-    _LOCK_HANDLE = open(lock_path, "w", encoding="utf-8")
+    lock_path = _lock_file_path()
     try:
-        fcntl.flock(_LOCK_HANDLE.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _LOCK_HANDLE = open(lock_path, "w", encoding="utf-8")
+        if fcntl is not None:
+            fcntl.flock(_LOCK_HANDLE.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        elif msvcrt is not None:
+            msvcrt.locking(_LOCK_HANDLE.fileno(), msvcrt.LK_NBLCK, 1)
         _LOCK_HANDLE.write(str(os.getpid()))
         _LOCK_HANDLE.flush()
         return True
-    except OSError:
+    except (OSError, IOError):
         return False
 
 
@@ -71,7 +98,11 @@ def _release_single_instance_lock() -> None:
     if _LOCK_HANDLE is None:
         return
     try:
-        fcntl.flock(_LOCK_HANDLE.fileno(), fcntl.LOCK_UN)
+        if fcntl is not None:
+            fcntl.flock(_LOCK_HANDLE.fileno(), fcntl.LOCK_UN)
+        elif msvcrt is not None:
+            _LOCK_HANDLE.seek(0)
+            msvcrt.locking(_LOCK_HANDLE.fileno(), msvcrt.LK_UNLCK, 1)
     except Exception:
         pass
     try:
@@ -133,8 +164,10 @@ def _ensure_visible_terminal() -> None:
         except Exception:
             continue
 
-    # Nenhum terminal funcionou: redirecionar logs para arquivo e continuar no processo atual
-    log_path = "/tmp/agv_production.log"
+    if sys.platform == "win32":
+        log_path = os.path.join(tempfile.gettempdir(), "agv_production.log")
+    else:
+        log_path = "/tmp/agv_production.log"
     try:
         log_file = open(log_path, "a", buffering=1, encoding="utf-8")
         sys.stdout = log_file

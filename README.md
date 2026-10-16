@@ -22,64 +22,77 @@ quanto so para visualizar o painel web (Windows/Mac, sem hardware).
 - No Windows/Mac: [Docker Desktop](https://www.docker.com/products/docker-desktop/)
   (com o backend WSL2 no Windows)
 
-**Para rodar sem Docker, direto no PC do AGV (Linux/Ubuntu):**
+**Para rodar sem Docker:**
 
-```bash
-sudo apt update
-sudo apt install -y python3 python3-pip python3-freenect libfreenect-dev libfreenect-bin
-```
+- **No Windows:**
+  - Python 3.10+ instalado
+  - Opcional: Arduino conectado em porta serial USB (ex.: `COM3`). O Kinect v1 no Windows opera em modo de simulação/fallback (a interface abre e funciona normalmente sem o hardware).
+- **No Linux/Ubuntu (PC do AGV com Kinect e Arduino):**
+  - Drivers e ferramentas de build do Kinect e USB:
+    ```bash
+    sudo apt update
+    sudo apt install -y python3 python3-pip python3-venv libfreenect-dev libfreenect-bin cython3 build-essential cmake libusb-1.0-0
+    ```
+    > **Nota sobre o Kinect:** Distribuições modernas (Debian 12 Bookworm, Ubuntu 22.04+) não possuem o pacote `python3-freenect` no APT. Os headers de desenvolvimento (`libfreenect-dev`) e `cython3` são instalados pelo sistema e o módulo Python é instalado via `pip install freenect`.
 
-### 🔧 Instalação
+### 🔧 Instalação e Execução
 
 Passo a passo para ter o ambiente rodando.
 
-**1. Clone o repositorio**
+**1. Clone o repositório**
 
 ```bash
 git clone https://github.com/Kauan-V-Marques/AGV.git
 cd AGV
 ```
 
-**2. Suba o container**
+**2. Executando com Docker**
 
-No PC do AGV (Linux/Ubuntu), com Kinect e Arduino conectados — o
-`docker-compose.yml` ja passa o Arduino (`/dev/ttyACM0`) e o Kinect (USB) para
-dentro do container. Se o Arduino aparecer em outra porta (ex.: `/dev/ttyACM1`),
-edite o campo `devices`:
+- **No Windows / Mac (teste do painel web, com ou sem hardware):**
+  Utilize a variante `docker-compose.windows.yml`, que expõe a porta `5000:5000` e desativa o passthrough direto de `/dev/...`:
+  ```bash
+  docker compose -f docker-compose.windows.yml up --build
+  ```
 
-```bash
-docker compose up --build
-```
+- **No PC do AGV (Linux/Ubuntu, com Kinect e Arduino conectados via USB):**
+  O arquivo padrão `docker-compose.yml` mapeia o Arduino (`/dev/ttyACM0`), o barramento USB do Kinect (`/dev/bus/usb`) e usa `network_mode: host`:
+  ```bash
+  docker compose up --build
+  ```
 
-No Windows/Mac, so para visualizar o painel web (sem hardware — o
-`docker-compose.yml` normal usa `network_mode: host` e caminhos `/dev/...` que
-nao existem no Docker Desktop, por isso existe a variante abaixo):
+Para rodar em segundo plano, adicione `-d`. Para parar, execute `docker compose down`. Para acompanhar os logs em tempo real: `docker compose logs -f`.
 
-```bash
-docker compose -f docker-compose.windows.yml up --build
-```
+**3. Executando localmente sem Docker**
 
-Para rodar em segundo plano, adicione `-d`. Para parar, `docker compose down`.
-Para ver os logs, `docker compose logs -f`.
+- **No Windows:**
+  1. Crie e ative um ambiente virtual:
+     ```powershell
+     python -m venv .venv
+     .\.venv\Scripts\activate
+     ```
+  2. Instale as dependências:
+     ```powershell
+     pip install -r requirements.txt
+     ```
+  3. Inicie o sistema:
+     ```powershell
+     python launch_production.py
+     ```
+  *Comportamento sem hardware:* A aplicação inicializa o servidor web e abre o navegador automaticamente em `http://127.0.0.1:5000`. O Kinect é tratado como opcional: sem o hardware, os streams exibem telas informativas ("Aguardando Kinect...") e todas as rotas e controles continuam operacionais. Caso haja um Arduino conectado (ex.: `COM3`), a porta é detectada e conectada automaticamente; se não houver, o modo serial entra em espera sem travar o sistema.
 
-**3. Acesse no navegador**
+- **No Linux/Ubuntu (PC do AGV):**
+  ```bash
+  python3 -m venv .venv
+  source .venv/bin/activate
+  pip install -r requirements.txt freenect
+  python launch_production.py
+  ```
+
+**4. Acesse no navegador**
 
 ```text
 http://localhost:5000
 ```
-
-Sem Kinect/Arduino/ZED conectados o painel abre normalmente, so que com os
-streams de video e status marcados como indisponiveis.
-
-**Sem Docker, direto no Linux do AGV:**
-
-```bash
-pip3 install -r requirements.txt --break-system-packages
-python3 launch_production.py
-```
-
-O launcher tenta liberar o Kinect, sobe o servidor web no mesmo processo, abre
-`http://127.0.0.1:5000` no navegador e mantem o terminal com os logs.
 
 ## 🛠️ Construído com
 

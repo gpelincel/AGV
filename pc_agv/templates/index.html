@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="pt-BR">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="stylesheet" href="/static/style.css">
+		<title>agv</title>
+	</head>
+	<body>
+		<main class="shell">
+			<section class="hero">
+				<div
+					id="net-banner"
+					hidden
+					style="
+						background: #7a1a1a;
+						color: #fff;
+						border-radius: 12px;
+						padding: 10px 16px;
+						font-size: 14px;
+						font-weight: 600;
+						letter-spacing: 0.03em;
+						text-align: center;
+					"></div>
+				<div class="hero-top">
+					<div>
+						<h1>agv</h1>
+						<p>
+							Controle pelo navegador com video ao vivo do Kinect, mapa de profundidade
+							e modo autonomo simples por distancia.
+						</p>
+					</div>
+					<div class="chips">
+						<div class="chip" id="chip-mode">modo manual</div>
+						<div class="chip" id="chip-kinect">kinect offline</div>
+						<div class="chip" id="chip-zed">zed offline</div>
+						<div class="chip" id="chip-serial">serial desconectada</div>
+						<div class="chip" id="chip-face">face sem cadastro</div>
+					</div>
+				</div>
+				<div class="access-row">
+					<span class="access-link" id="access-link"
+						>Link para outro dispositivo: carregando...</span
+					>
+					<button class="copy-link-button" id="btn-copy-link" type="button">
+						Copiar link
+					</button>
+				</div>
+			</section>
+
+			<section class="grid">
+				<div class="video-stack">
+					<article class="panel">
+						<h2>RGB Kinect</h2>
+						<img class="stream" src="/video" alt="Video RGB do Kinect" />
+						<div class="caption">Imagem ao vivo usada para acompanhar o agv.</div>
+					</article>
+
+					<article class="panel">
+						<h2>Depth Kinect</h2>
+						<img
+							class="stream"
+							src="/depth_map"
+							alt="Mapa de profundidade do Kinect" />
+						<div class="caption">Mapa de distancia usado no modo autonomo.</div>
+					</article>
+
+					<article class="panel">
+						<h2>Webcam ZED</h2>
+						<img class="stream" src="/zed" alt="Video da webcam ZED" />
+						<div class="caption">Camera extra para monitorar a traseira do agv.</div>
+					</article>
+				</div>
+
+				<div class="side">
+					<section class="panel">
+						<h2>Modo</h2>
+						<div class="mode-row">
+							<button
+								class="mode-button is-selected"
+								data-mode="manual"
+								id="btn-manual">
+								Manual
+							</button>
+							<button class="mode-button" data-mode="auto" id="btn-auto">
+								Autonomo
+							</button>
+						</div>
+						<div class="action-row" style="margin-top: 10px">
+							<button id="btn-reconnect">Reconectar Kinect</button>
+							<button id="btn-stabilization">Estabilizacao ON</button>
+							<button id="btn-tilt-up">Tilt +</button>
+							<button id="btn-tilt-center">Centralizar</button>
+							<button id="btn-tilt-down">Tilt -</button>
+							<button class="stop-button" id="btn-stop">Parada total</button>
+						</div>
+					</section>
+
+					<section class="panel">
+						<h2>Rostos</h2>
+						<div class="face-tools">
+							<label class="face-field">
+								<span>Pessoa para procurar na ZED</span>
+								<select id="face-select">
+									<option value="">Nenhuma pessoa selecionada</option>
+								</select>
+							</label>
+							<label class="face-field">
+								<span>Nome do rosto</span>
+								<input
+									id="face-name-input"
+									type="text"
+									maxlength="60"
+									placeholder="Ex.: Kauan" />
+							</label>
+							<label class="face-field">
+								<span>Imagem para cadastro</span>
+								<input id="face-file-input" type="file" accept="image/*" />
+							</label>
+							<button
+								class="face-register-button"
+								id="btn-face-register"
+								type="button">
+								Registrar rosto
+							</button>
+							<p class="face-helper" id="face-form-status">
+								Escolha uma pessoa no seletor. O quadrado so aparece na ZED quando o
+								rosto escolhido for encontrado.
+							</p>
+						</div>
+					</section>
+
+					<section class="panel">
+						<h2>Controle Manual</h2>
+						<div class="manual-layout">
+							<div class="pad" id="keyboard-pad">
+								<button class="blank" aria-hidden="true"></button>
+								<button data-key="w">W</button>
+								<button class="blank" aria-hidden="true"></button>
+								<button data-key="a">A</button>
+								<button data-key="s">S</button>
+								<button data-key="d">D</button>
+							</div>
+							<div class="joystick-wrap" id="mobile-joystick" hidden>
+								<div
+									class="joystick-base"
+									id="joystick-base"
+									aria-label="Controle por stick virtual">
+									<div class="joystick-ring"></div>
+									<div class="joystick-knob" id="joystick-knob"></div>
+								</div>
+								<div class="joystick-readout" id="joystick-readout">Stick: parado</div>
+							</div>
+						</div>
+						<p class="footer-note" id="control-hint">
+							No celular aparece stick virtual. No PC, use W A S D, setas ou E como
+							esquerda.
+						</p>
+					</section>
+
+					<section class="panel">
+						<h2>Telemetria</h2>
+						<div class="telemetry">
+							<div class="metric">
+								<span>Distancia frontal</span><strong id="distance">--</strong>
+							</div>
+							<div class="metric">
+								<span>Esquerda</span><strong id="left-clearance">--</strong>
+							</div>
+							<div class="metric">
+								<span>Centro</span><strong id="center-clearance">--</strong>
+							</div>
+							<div class="metric">
+								<span>Direita</span><strong id="right-clearance">--</strong>
+							</div>
+							<div class="metric">
+								<span>Comando ativo</span><strong id="active-command">--</strong>
+							</div>
+							<div class="metric">
+								<span>Autonomo</span><strong id="auto-reason">--</strong>
+							</div>
+							<div class="metric">
+								<span>Kinect</span><strong id="kinect-status">--</strong>
+							</div>
+							<div class="metric">
+								<span>Webcam ZED</span><strong id="zed-status">--</strong>
+							</div>
+							<div class="metric">
+								<span>Arduino</span><strong id="serial-status">--</strong>
+							</div>
+							<div class="metric">
+								<span>Face</span><strong id="face-status">--</strong>
+							</div>
+							<div class="metric">
+								<span>FPS</span><strong id="fps-status">--</strong>
+							</div>
+						</div>
+					</section>
+
+					<section class="panel">
+						<h2>Configuracoes</h2>
+						<div class="telemetry">
+							<div class="metric">
+								<span>Modo escuro</span>
+								<label class="toggle-switch" title="Alternar modo escuro">
+									<input type="checkbox" id="dark-mode-toggle" />
+									<span class="toggle-track"></span>
+									<span class="toggle-thumb"></span>
+								</label>
+							</div>
+							<div
+								class="metric"
+								style="flex-direction: column; align-items: stretch; gap: 10px">
+								<div
+									style="
+										display: flex;
+										justify-content: space-between;
+										align-items: center;
+									">
+									<span>Velocidade maxima</span>
+									<strong id="speed-limit-display">100%</strong>
+								</div>
+								<input
+									type="range"
+									class="speed-slider"
+									id="speed-limit-slider"
+									min="0"
+									max="100"
+									value="100"
+									step="5" />
+							</div>
+						</div>
+					</section>
+				</div>
+			</section>
+		</main>
+		<script type="module" src="/static/scripts/main.js"></script>
+	</body>
+</html>

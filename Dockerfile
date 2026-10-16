@@ -17,27 +17,28 @@ WORKDIR /app
 
 # ─────────────────────────────────────────────
 # Dependências do sistema
-#   freenect         – driver do Kinect v1
+#   libfreenect-dev  – headers C do driver do Kinect v1
+#   cython3          – necessário para compilar bindings Python do freenect
 #   libusb           – acesso USB (Kinect + Arduino)
-#   cmake/g++/etc.    – necessarios para compilar dlib (face-recognition)
+#   cmake/g++/etc.   – necessários para compilar dlib (face-recognition) e freenect
 # ─────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        python3-freenect \
         libfreenect-dev \
         libfreenect-bin \
+        cython3 \
         libusb-1.0-0 \
         udev \
         build-essential \
         cmake \
-        # necessário para pyserial encontrar portas seriais
         && rm -rf /var/lib/apt/lists/*
 
 # ─────────────────────────────────────────────
-# Dependências Python (sem freenect — já é de sistema)
-# face-recognition puxa o dlib, que compila do fonte (demora na 1a build).
+# Dependências Python
+# face-recognition puxa o dlib, que compila do fonte.
+# freenect compila bindings C contra libfreenect-dev.
 # ─────────────────────────────────────────────
 COPY requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt freenect
 
 # ─────────────────────────────────────────────
 # Código do projeto
