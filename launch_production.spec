@@ -30,6 +30,10 @@ _cascade_name = "haarcascade_frontalface_default.xml"
 _opencv_cascade = os.path.join(os.path.dirname(cv2.__file__), "data", _cascade_name)
 if os.path.exists(_opencv_cascade):
     _datas.append((_opencv_cascade, os.path.join("cv2", "data")))
+if os.path.exists("pc_agv/templates"):
+    _datas.append(("pc_agv/templates", "pc_agv/templates"))
+if os.path.exists("pc_agv/static"):
+    _datas.append(("pc_agv/static", "pc_agv/static"))
 
 a = Analysis(
     ["launch_production.py"],

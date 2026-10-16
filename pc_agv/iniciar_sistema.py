@@ -111,8 +111,8 @@ _threads = []
 _state_lock = threading.Lock()
 _state = {
     "rgb": None,
-  "rgb_raw": None,
-        "zed": None,
+    "rgb_raw": None,
+    "zed": None,
     "zed_device": ZED_DEVICE,
     "depth": None,
     "depth_mm": False,
@@ -120,9 +120,9 @@ _state = {
     "left_clearance_m": None,
     "center_clearance_m": None,
     "right_clearance_m": None,
-  "tilt_deg": None,
-  "tilt_target_deg": 0.0,
-  "accel": [0.0, 0.0, 0.0],
+    "tilt_deg": None,
+    "tilt_target_deg": 0.0,
+    "accel": [0.0, 0.0, 0.0],
     "fps_rgb": 0.0,
     "fps_depth": 0.0,
     "fps_zed": 0.0,
@@ -196,18 +196,25 @@ _settings = {
 }
 
 _face_lock = threading.Lock()
-_face_cascade = cv2.CascadeClassifier(
-  os.path.join(cv2.data.haarcascades, "haarcascade_frontalface_default.xml")
-)
+try:
+    _cascade_path = (
+        os.path.join(cv2.data.haarcascades, "haarcascade_frontalface_default.xml")
+        if hasattr(cv2, "data") and hasattr(cv2.data, "haarcascades")
+        else ""
+    )
+    _face_cascade = cv2.CascadeClassifier(_cascade_path) if _cascade_path else cv2.CascadeClassifier()
+except Exception:
+    _face_cascade = cv2.CascadeClassifier()
+
 _face_runtime = {
-  "known": False,
-  "label": "",
-  "distance": None,
-  "last_seen_at": 0.0,
-  "last_announce_at": 0.0,
-  "bbox": None,
-  "next_scan_at": 0.0,
-  "template_loaded": False,
+    "known": False,
+    "label": "",
+    "distance": None,
+    "last_seen_at": 0.0,
+    "last_announce_at": 0.0,
+    "bbox": None,
+    "next_scan_at": 0.0,
+    "template_loaded": False,
     "selected_name": "",
 }
 
@@ -326,8 +333,6 @@ def _face_extract_primary(gray_frame: np.ndarray):
     return (int(x), int(y), int(w), int(h)), _face_preprocess(crop)
 
 
-def _load_kauan_face_descriptor() -> None:
-    global _face_known_encodings, _face_known_names
 def _normalize_face_name(name: str) -> str:
     normalized = " ".join(str(name or "").strip().split())
     return normalized[:60]
@@ -2125,28 +2130,6 @@ def route_face_select():
     status_code = 200 if ok else 404
     return jsonify({"ok": ok, "message": message, "face": _face_status_snapshot()}), status_code
 
-#def route_face_register_face():
-#    with _state_lock:
-#        frame = None if _state["rgb_raw"] is None else _state["rgb_raw"].copy()
-#
-#    if frame is None:
-#        return jsonify({"ok": False, "error": "no_frame"}), 400
-#
-#    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-#    bbox, descriptor = _face_extract_primary(gray)
-#    if bbox is None or descriptor is None:
-#        return jsonify({"ok": False, "error": "no_face_detected"}), 400
-#
-#    _save_kauan_face_descriptor(descriptor)
-#    with _face_lock:
-#        _face_runtime["known"] = True
-#        _face_runtime["label"] = "e o Kauan"
-#        _face_runtime["distance"] = 0.0
-#        _face_runtime["last_seen_at"] = _now()
-#        _face_runtime["bbox"] = bbox
-#        _face_runtime["next_scan_at"] = 0.0
-#
-#    return jsonify({"ok": True, "face": _face_status_snapshot()})
 
 
 @app.route("/api/control", methods=["POST"])
